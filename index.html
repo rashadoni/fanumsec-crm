@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>FanumSec × LeadDrive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: a fixed 1920×1080 stage scaled to the window; one scene at a time, each with its own short timeline.
+   Part one follows the client's own list, part two is the AI bonus. One accent colour (switchable), semantic colours stay semantic. */
+:root {
+  --bg: #F3F5F4;
+  --surface: #FFFFFF;
+  --ink: #121514;
+  --muted: #59605D;
+  --line: #DFE4E1;
+  --night: #0D1110;
+  --ok: #0F9D63;
+  --late: #D92D20;
+  --hot: #0B8F65;
+  --hot-ink: #076B4B;
+  --soft: #DDF3E9;
+  --glow: rgba(11, 143, 101, .22);
+  --ai: linear-gradient(110deg, #0B8F65 0%, #0FA6A0 100%);
+  --blob1: #36C493;
+  --blob2: #8ADBC9;
+  --night-hot: #5FE3B4;
+  --display: 'Unbounded', 'Manrope', 'Arial Black', sans-serif;
+  --text: 'Manrope', 'Segoe UI', Arial, sans-serif;
+  color-scheme: light;
+}
+:root[data-pal="red"] {
+  --hot: #D7193F; --hot-ink: #A80F2E; --soft: #FCE3E8; --glow: rgba(215, 25, 63, .2);
+  --ai: linear-gradient(110deg, #D7193F 0%, #F2557A 100%); --blob1: #F25C7A; --blob2: #FFB8C6; --night-hot: #FF7E97;
+}
+:root[data-pal="graphite"] {
+  --hot: #1B1D1C; --hot-ink: #1B1D1C; --soft: #EAF6CC; --glow: rgba(110, 160, 20, .25);
+  --ai: linear-gradient(110deg, #1B1D1C 0%, #5F8E10 100%); --blob1: #B4E23A; --blob2: #DCEFA8; --night-hot: #C8F255;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--text); overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+#viewport { position: fixed; inset: 0; overflow: hidden; background: var(--bg); }
+#stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; background: var(--bg); overflow: hidden; }
+#stage::before, #stage::after { content: ""; position: absolute; width: 1100px; height: 1100px; border-radius: 50%; filter: blur(130px); opacity: .17; pointer-events: none; animation: drift 18s ease-in-out infinite alternate; }
+#stage::before { background: var(--blob1); left: -340px; top: -480px; }
+#stage::after { background: var(--blob2); right: -380px; bottom: -520px; animation-delay: -9s; }
+@keyframes drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(140px, 90px) scale(1.12); } }
+
+.scene { position: absolute; inset: 0; padding: 104px 128px 150px; box-sizing: border-box; opacity: 0; visibility: hidden; transition: opacity .55s ease, visibility .55s; z-index: 1; }
+.scene.active { opacity: 1; visibility: visible; z-index: 2; }
+.scene.dark { background: var(--night); color: #F2F4F3; }
+
+[data-a] { opacity: 0; transition: opacity .8s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1); transition-delay: calc(var(--d, 0) * 1ms); }
+[data-a="up"] { transform: translateY(40px); }
+[data-a="left"] { transform: translateX(-60px); }
+[data-a="right"] { transform: translateX(80px); }
+[data-a="zoom"] { transform: scale(.9); }
+[data-a="tilt"] { transform: perspective(1600px) rotateY(-18deg) rotateX(6deg) translateX(120px); }
+.scene.in [data-a] { opacity: 1; transform: none; }
+
+.eyebrow { font: 700 24px/1 var(--text); letter-spacing: .16em; text-transform: uppercase; color: var(--hot-ink); margin: 0 0 26px; }
+.dark .eyebrow { color: var(--night-hot); }
+h1, h2 { font-family: var(--display); font-weight: 800; letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+h1 { font-size: 104px; line-height: 1; }
+h2 { font-size: 60px; line-height: 1.06; }
+.lead { font-size: 32px; line-height: 1.4; color: var(--muted); margin: 28px 0 0; max-width: 760px; }
+.dark .lead { color: #B5BDB9; }
+.ai-text { background: var(--ai); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.dark .ai-text { background: none; color: var(--night-hot); }
+.chip { display: inline-flex; align-items: center; gap: 10px; font: 700 24px/1 var(--text); padding: 14px 22px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); }
+.chip.ai { background: var(--ai); color: #fff; border: 0; }
+.chip.acc { background: var(--soft); color: var(--hot-ink); border-color: transparent; }
+.chip.ok { background: #E3F5EC; color: #0B7A4C; border-color: #BFE6D2; }
+.chip.wait { background: #FFF2D9; color: #8A5A00; border-color: #F3D9A3; }
+.chip.late { background: #FDE7E5; color: #B42318; border-color: #F7C6C1; }
+
+.frame { position: absolute; border-radius: 22px; background: var(--surface); box-shadow: 0 40px 90px rgba(16, 24, 20, .15), 0 0 0 1px rgba(16,24,20,.06); overflow: hidden; }
+.frame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.label { position: absolute; font: 600 22px/1.3 var(--text); color: var(--muted); }
+.ring { position: absolute; border: 4px solid var(--late); border-radius: 14px; box-shadow: 0 0 0 0 rgba(217,45,32,.45); animation: ring 1.6s infinite; pointer-events: none; }
+@keyframes ring { 0%,100% { box-shadow: 0 0 0 0 rgba(217,45,32,.45); } 50% { box-shadow: 0 0 0 16px rgba(217,45,32,0); } }
+
+.phone { position: absolute; width: 372px; height: 780px; border-radius: 56px; background: #151917; padding: 13px; box-sizing: border-box; box-shadow: 0 50px 100px rgba(16, 24, 20, .26); }
+.phone > img { width: 100%; height: 100%; border-radius: 44px; object-fit: cover; object-position: top; display: block; }
+.phone::after { content: ""; position: absolute; top: 24px; left: 50%; width: 110px; height: 30px; margin-left: -55px; border-radius: 20px; background: #151917; }
+
+.chat { width: 100%; height: 100%; border-radius: 44px; background: var(--bg); display: flex; flex-direction: column; overflow: hidden; }
+.chat .top { padding: 62px 26px 18px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; }
+.chat .ava { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font: 800 20px/1 var(--text); color: #fff; }
+.chat .who b { display: block; font-size: 22px; }
+.chat .who span { font-size: 18px; color: var(--muted); }
+.chat .msgs { flex: 1; padding: 22px 18px; display: flex; flex-direction: column; gap: 14px; }
+.msg { max-width: 82%; font-size: 21px; line-height: 1.38; padding: 14px 18px; border-radius: 22px; opacity: 0; transform: translateY(16px) scale(.97); transition: opacity .45s, transform .45s cubic-bezier(.2,.8,.2,1); }
+.msg.show { opacity: 1; transform: none; }
+.msg.in { background: var(--surface); border: 1px solid var(--line); align-self: flex-start; border-bottom-left-radius: 8px; }
+.msg.out { background: var(--bubble, var(--soft)); border: 1px solid var(--bubble-line, transparent); align-self: flex-end; border-bottom-right-radius: 8px; }
+.msg small { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 16px; color: var(--muted); }
+.badge-ai { font: 800 15px/1 var(--text); color: #fff; background: var(--ai); padding: 5px 9px; border-radius: 999px; }
+.typing { align-self: flex-end; background: var(--bubble, var(--soft)); border-radius: 22px; padding: 16px 20px; display: none; gap: 6px; }
+.typing.show { display: flex; }
+.typing i { width: 10px; height: 10px; border-radius: 50%; background: var(--hot); animation: blink 1s infinite; }
+.typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+.float { animation: float 7s ease-in-out infinite; }
+@keyframes float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -18px; } }
+
+/* agenda */
+.agenda { position: absolute; left: 128px; right: 128px; top: 330px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; }
+.ag { display: flex; align-items: center; gap: 26px; padding: 22px 28px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); cursor: pointer; text-align: left; font: inherit; color: inherit; transition: box-shadow .3s, border-color .3s; }
+.ag:hover, .ag:focus-visible { border-color: var(--hot); box-shadow: 0 20px 40px var(--glow); outline: none; }
+.ag .n { font: 800 30px/1 var(--display); color: var(--hot); width: 54px; flex: none; }
+.ag b { display: block; font-size: 30px; line-height: 1.2; }
+.ag span { display: block; font-size: 22px; color: var(--muted); margin-top: 6px; }
+.ag.bonus { background: var(--ai); color: #fff; border: 0; }
+.ag.bonus .n, .ag.bonus span { color: rgba(255,255,255,.85); }
+
+/* channels */
+.hub { position: absolute; left: 330px; top: 420px; width: 420px; height: 300px; border-radius: 34px; background: var(--surface); box-shadow: 0 40px 90px rgba(16,24,20,.13); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; z-index: 3; }
+.hub b { font: 800 120px/1 var(--display); color: var(--hot); font-variant-numeric: tabular-nums; }
+.hub span { font: 700 26px/1 var(--text); color: var(--muted); }
+.ch { position: absolute; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 16px 24px 16px 16px; border-radius: 999px; background: var(--surface); box-shadow: 0 16px 40px rgba(16,24,20,.12); font: 700 26px/1 var(--text); white-space: nowrap; transition: transform 1s cubic-bezier(.6,0,.3,1), opacity .5s ease .7s; }
+.ch i { width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font: 800 18px/1 var(--text); font-style: normal; }
+.ch.go { opacity: 0; }
+
+/* kanban */
+.board { position: absolute; left: 128px; top: 330px; width: 1664px; height: 560px; }
+.col { position: absolute; top: 0; width: 313px; height: 560px; border-radius: 26px; background: var(--colbg); border: 1px solid var(--line); box-sizing: border-box; padding: 22px; }
+.col h4 { margin: 0; font: 800 24px/1 var(--text); display: flex; justify-content: space-between; align-items: center; }
+.col h4 em { font-style: normal; font-size: 20px; color: var(--muted); background: var(--bg); border-radius: 999px; padding: 6px 12px; }
+.col .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+.card { position: absolute; width: 281px; box-sizing: border-box; padding: 18px 18px 16px; border-radius: 18px; background: var(--surface); box-shadow: 0 12px 30px rgba(16,24,20,.09); border: 1px solid var(--line); transition: left .9s cubic-bezier(.6,0,.25,1), top .9s cubic-bezier(.6,0,.25,1), box-shadow .4s; }
+.card b { display: block; font-size: 22px; line-height: 1.25; }
+.card .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 18px; color: var(--muted); }
+.card .p { font: 800 18px/1 var(--text); color: #fff; background: var(--ai); border-radius: 999px; padding: 6px 10px; }
+.card.moving { box-shadow: 0 30px 60px var(--glow); z-index: 5; }
+.card.won { border-color: #9ED9BD; }
+
+/* quote compare */
+.qt { position: absolute; left: 820px; top: 150px; width: 972px; border-collapse: separate; border-spacing: 0; font-size: 27px; background: var(--surface); border-radius: 26px; box-shadow: 0 40px 90px rgba(16,24,20,.12); overflow: hidden; }
+.qt th, .qt td { padding: 18px 24px; text-align: right; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.qt th:first-child, .qt td:first-child { text-align: left; }
+.qt th { font: 800 24px/1 var(--text); color: var(--muted); background: var(--th); }
+.qt th.v2h { color: var(--hot-ink); }
+.qt tr.tot td { font-weight: 800; font-size: 30px; border-bottom: 0; }
+.qt td.v2, .qt th.v2h { opacity: 0; transition: opacity .5s, background .6s; }
+.qt.showv2 td.v2, .qt.showv2 th.v2h { opacity: 1; }
+.qt td.chg.flash { background: var(--soft); color: var(--hot-ink); font-weight: 800; }
+.qt tr.st td { font-size: 22px; }
+.reason { position: absolute; left: 128px; top: 480px; width: 620px; background: var(--surface); border-radius: 26px; padding: 30px 34px; box-sizing: border-box; border: 1px solid var(--line); box-shadow: 0 30px 60px rgba(16,24,20,.08); }
+.reason p { margin: 0; font-size: 28px; line-height: 1.4; min-height: 78px; }
+.reason small { display: block; font: 700 22px/1 var(--text); color: var(--muted); margin-bottom: 14px; }
+.big-num { font: 800 64px/1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+
+/* approval */
+.ctx { position: absolute; left: 128px; top: 290px; display: flex; gap: 14px; flex-wrap: wrap; }
+.chain { position: absolute; left: 128px; right: 128px; top: 380px; display: flex; align-items: center; }
+.node { width: 640px; padding: 30px 36px; border-radius: 28px; background: var(--surface); border: 2px solid var(--line); display: flex; align-items: center; gap: 26px; transition: border-color .5s, background .5s; box-sizing: border-box; }
+.node .ic { width: 80px; height: 80px; border-radius: 50%; display: grid; place-items: center; background: var(--bg); flex: none; transition: background .5s; }
+.node .ic svg { width: 40px; height: 40px; }
+.node h3 { margin: 0 0 8px; font: 800 36px/1.1 var(--display); }
+.node p { margin: 0; font-size: 26px; color: var(--muted); line-height: 1.35; }
+.node.done { border-color: #9ED9BD; } .node.done .ic { background: #E3F5EC; }
+.node.pending { border-color: #F3D9A3; } .node.pending .ic { background: #FFF2D9; animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(217,138,0,.35); } 50% { box-shadow: 0 0 0 18px rgba(217,138,0,0); } }
+.link { flex: 1; height: 8px; border-radius: 8px; background: var(--line); margin: 0 24px; position: relative; overflow: hidden; }
+.link b { position: absolute; inset: 0; width: 0; background: var(--ok); transition: width 1s ease; }
+.rule { position: absolute; left: 128px; right: 128px; top: 610px; display: flex; align-items: center; gap: 22px; padding: 24px 32px; border-radius: 24px; background: var(--soft); color: var(--hot-ink); font-size: 28px; font-weight: 700; box-sizing: border-box; }
+.rule .tag { font: 800 20px/1 var(--text); background: var(--hot); color: #fff; padding: 9px 14px; border-radius: 999px; flex: none; }
+.dark .rule, :root[data-pal="graphite"] .rule .tag { color: #fff; }
+
+/* statuses */
+.steps { position: absolute; left: 128px; right: 128px; top: 300px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+.stp { padding: 18px 16px; border-radius: 18px; background: var(--surface); border: 2px solid var(--line); text-align: center; font: 800 26px/1 var(--text); transition: background .4s, border-color .4s, color .4s, transform .4s; }
+.stp i { display: block; font: 700 18px/1 var(--text); font-style: normal; color: var(--muted); margin-bottom: 8px; }
+.stp.on { background: var(--hot); border-color: var(--hot); color: #fff; transform: translateY(-6px); }
+.stp.on i { color: rgba(255,255,255,.8); }
+.stp.past { border-color: var(--hot); color: var(--hot-ink); }
+
+/* levels */
+.levels { position: absolute; left: 128px; right: 128px; top: 430px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.lvl { background: var(--surface); border-radius: 30px; padding: 44px 44px 48px; border: 2px solid var(--line); transition: border-color .5s, box-shadow .5s, transform .5s; }
+.lvl.on { border-color: var(--hot); box-shadow: 0 40px 80px var(--glow); transform: translateY(-10px); }
+.lvl .n { font: 800 28px/1 var(--display); color: var(--hot); }
+.lvl h3 { font: 800 40px/1.15 var(--display); margin: 22px 0 14px; letter-spacing: -.01em; }
+.lvl p { font-size: 26px; line-height: 1.4; color: var(--muted); margin: 0 0 22px; }
+.track { position: absolute; left: 128px; right: 128px; top: 360px; height: 8px; border-radius: 8px; background: var(--line); }
+.track b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 8px; background: var(--ai); transition: width 1s cubic-bezier(.4,0,.2,1); }
+
+/* scoring */
+.grades { position: absolute; left: 128px; top: 470px; display: flex; gap: 22px; align-items: flex-end; }
+.g { width: 132px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.g .bar { width: 100%; border-radius: 18px 18px 8px 8px; height: 0; transition: height 1.1s cubic-bezier(.2,.8,.2,1); }
+.g b { font: 800 56px/1 var(--display); }
+.g span { font: 700 26px/1 var(--text); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* da vinci */
+.brief { position: absolute; left: 128px; top: 430px; width: 640px; display: flex; flex-direction: column; gap: 26px; }
+.brief .row { display: flex; gap: 22px; align-items: flex-start; opacity: 0; transform: translateY(14px); transition: opacity .5s, transform .5s; }
+.brief .row.show { opacity: 1; transform: none; }
+.brief .row i { font: 800 22px/1.5 var(--display); font-style: normal; color: var(--night-hot); }
+.brief .row span { font-size: 32px; line-height: 1.35; color: #ECEFEE; min-height: 43px; }
+.ask { position: absolute; left: 128px; top: 830px; width: 640px; height: 84px; border-radius: 22px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); display: flex; align-items: center; gap: 18px; padding: 0 26px; box-sizing: border-box; font-size: 26px; color: #fff; }
+.caret { display: inline-block; width: 3px; height: 32px; background: var(--night-hot); margin-left: 2px; vertical-align: middle; animation: car 1s steps(1) infinite; }
+@keyframes car { 50% { opacity: 0; } }
+
+/* tabs carousel */
+.tabs { position: absolute; left: 128px; top: 330px; display: flex; flex-direction: column; gap: 18px; width: 470px; }
+.tab { padding: 28px 32px; border-radius: 24px; border: 2px solid var(--line); background: var(--surface); transition: border-color .4s, box-shadow .4s; }
+.tab h3 { margin: 0 0 8px; font: 800 32px/1.1 var(--display); }
+.tab p { margin: 0; font-size: 24px; color: var(--muted); line-height: 1.35; }
+.tab.on { border-color: var(--hot); box-shadow: 0 30px 60px var(--glow); }
+.slides { position: absolute; left: 680px; top: 300px; width: 1112px; height: 650px; }
+.slides .frame { inset: 0; opacity: 0; transform: translateY(24px) scale(.98); transition: opacity .6s, transform .6s; }
+.slides .frame.on { opacity: 1; transform: none; }
+
+/* languages */
+.langbig { position: absolute; left: 128px; top: 210px; height: 110px; width: 1664px; }
+.langbig span { position: absolute; left: 0; top: 0; font: 800 96px/1 var(--display); opacity: 0; transform: translateY(30px); transition: opacity .5s, transform .5s; }
+.langbig span.on { opacity: 1; transform: none; }
+
+/* tech tiles */
+.tiles { position: absolute; left: 128px; right: 128px; top: 360px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: 38px 40px; }
+.tile .ico { width: 64px; height: 64px; border-radius: 18px; background: var(--soft); display: grid; place-items: center; margin-bottom: 22px; }
+.tile .ico svg { width: 34px; height: 34px; stroke: var(--hot-ink); }
+.tile h3 { margin: 0 0 10px; font: 800 34px/1.1 var(--display); }
+.tile p { margin: 0; font-size: 24px; color: var(--muted); line-height: 1.4; }
+
+#confetti { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+
+/* controls */
+#ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 12px; z-index: 50; transition: opacity .4s; }
+#ui.idle { opacity: 0; }
+#dots { flex: 1; display: flex; gap: 5px; }
+#dots button { flex: 1; height: 6px; border-radius: 6px; border: 0; padding: 0; background: rgba(18,21,20,.14); cursor: pointer; }
+#dots button.on { background: var(--hot); }
+#dots button.past { background: var(--glow); }
+.ctl { border: 1px solid var(--line); background: rgba(255,255,255,.92); color: var(--ink); font: 700 14px/1 var(--text); height: 36px; min-width: 36px; padding: 0 12px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.ctl:focus-visible, #dots button:focus-visible { outline: 3px solid var(--hot); outline-offset: 2px; }
+.sw { width: 14px; height: 14px; border-radius: 50%; background: var(--hot); display: inline-block; }
+#count { font: 700 14px/1 var(--text); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
+
+
+:root { --colbg: rgba(255,255,255,.6); --th: #F7F8F8; }
+:root[data-bg="dark"] { --bg:#0B100F; --surface:#141B19; --ink:#EEF3F1; --muted:#A3B0AA; --line:#26312D; --colbg: rgba(255,255,255,.04); --th:#1A2320; --hot-ink: var(--night-hot); --soft: rgba(255,255,255,.09); --bubble: rgba(95,227,180,.14); --bubble-line: rgba(95,227,180,.45); color-scheme: dark; }
+:root[data-bg="dark"] .eyebrow { color: var(--night-hot); }
+:root[data-bg="dark"] .stp.on { color: #fff; }
+:root[data-bg="dark"] #stage::before, :root[data-bg="dark"] #stage::after { opacity: .24; }
+:root[data-bg="dark"] .frame, :root[data-bg="dark"] .cam { box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 40px 120px var(--glow); }
+:root[data-bg="dark"] .ctl { background: rgba(20,27,25,.92); color: var(--ink); }
+:root[data-bg="dark"] #dots button { background: rgba(255,255,255,.18); }
+:root[data-bg="dark"] .scene.dark { background: #060908; }
+.scene { transform: scale(1.035); transition: opacity .6s ease, visibility .6s, transform 1s cubic-bezier(.2,.7,.2,1); }
+.scene.active { transform: none; }
+.w { display: inline-block; opacity: 0; transform: translateY(.45em); filter: blur(10px); transition: opacity .6s, transform .8s cubic-bezier(.2,.8,.2,1), filter .7s; transition-delay: calc(var(--wi, 0) * 70ms + var(--d, 0) * 1ms); }
+.scene.in .w { opacity: 1; transform: none; filter: blur(0); }
+.cam { position: absolute; overflow: hidden; border-radius: 22px; background: var(--surface); box-shadow: 0 40px 90px rgba(16,24,20,.15), 0 0 0 1px rgba(16,24,20,.06); }
+.cam { background: none !important; box-shadow: none !important; overflow: visible !important; border-radius: 0 !important; }
+.cam .lay { position: absolute; max-width: none; border-radius: 18px; background: #fff; box-shadow: 0 30px 80px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.07); opacity: 0; transform: scale(.94) translateY(22px); transition: opacity .7s ease, transform .9s cubic-bezier(.2,.8,.2,1); }
+.cam .lay.on { opacity: 1; transform: none; }
+.grades.small .g { width: 110px; } .grades.small .g b { font-size: 44px; } .grades.small .g span { font-size: 22px; }
+.dark h1 .ai-text, .dark h2 .ai-text, h1 .ai-text, h2 .ai-text { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: inherit; }
+.chip.tabc { transition: background .4s, color .4s, border-color .4s; }
+.chip.tabc.on { background: var(--hot); color: #fff; border-color: var(--hot); }
+.cam.swap img { transition: none; }
+.co { position: absolute; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-radius: 16px; background: var(--ink); color: var(--bg); font: 700 26px/1.2 var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.25); opacity: 0; transform: translateY(14px) scale(.96); transition: opacity .45s, transform .45s cubic-bezier(.2,.8,.2,1); pointer-events: none; }
+.co.show { opacity: 1; transform: none; }
+.co i { width: 12px; height: 12px; border-radius: 50%; background: var(--hot); flex: none; font-style: normal; }
+.cursor { position: absolute; z-index: 20; width: 44px; height: 44px; left: 960px; top: 1100px; pointer-events: none; transition: left .9s cubic-bezier(.6,0,.25,1), top .9s cubic-bezier(.6,0,.25,1), opacity .3s; opacity: 0; filter: drop-shadow(0 8px 14px rgba(0,0,0,.3)); }
+.cursor.show { opacity: 1; }
+.cursor.fast { transition-duration: .4s; }
+.cursor svg { width: 44px; height: 44px; display: block; }
+.ripple { position: absolute; z-index: 19; width: 80px; height: 80px; margin: -40px 0 0 -40px; border-radius: 50%; border: 4px solid var(--hot); pointer-events: none; animation: rip .6s ease-out forwards; }
+@keyframes rip { from { transform: scale(.3); opacity: .9; } to { transform: scale(1.4); opacity: 0; } }
+.xls { position: absolute; z-index: 8; width: 160px; height: 190px; border-radius: 18px; background: #1D6F42; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; font: 800 34px/1 var(--text); box-shadow: 0 30px 60px rgba(0,0,0,.3); opacity: 0; transform: translateY(40px) scale(.6) rotate(-6deg); transition: opacity .5s, transform .7s cubic-bezier(.3,1.5,.5,1); }
+.xls.show { opacity: 1; transform: none; }
+.xls small { font: 600 18px/1.2 var(--text); opacity: .85; }
+h2 { font-size: 66px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .w, .cam img, .co, .cursor, .scene { transition: none !important; }
+  [data-a], .msg, .card, .ch, .lvl, .g .bar, .brief .row, .slides .frame, .langbig span, .stp, .qt td.v2 { transition: none !important; }
+  .float, #stage::before, #stage::after, .typing i, .node.pending .ic, .caret, .ring { animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+
+<div id="viewport">
+<div id="stage">
+
+<!-- 1 intro -->
+<section class="scene active in" data-name="intro">
+  <div style="position:absolute; left:128px; top:250px; width:900px;">
+    <p class="eyebrow" data-a="up">BOOO.AZ × LeadDrive CRM</p>
+    <h1 style="--d:120; font-size:80px; line-height:1.04;">Müraciətdən<br>təhvilə qədər —<br><span class="ai-text">bir sistem</span></h1>
+    <p class="lead" data-a="up" style="--d:300">Satış, sifariş statusları, hesabatlar və süni intellekt — 15 nəfərlik komanda üçün.</p>
+  </div>
+  <div class="frame float" data-a="tilt" style="--d:250; left: 1090px; top: 150px; width: 740px; height: 425px;"><img src="img/board_list.jpg" alt="LeadDrive CRM: sifarişlər lövhəsi statuslarla"></div>
+  <div class="frame float" data-a="tilt" style="--d:450; left: 1210px; top: 500px; width: 620px; height: 390px; animation-delay: -2.5s;"><img src="img/inbox_rauf.jpg" alt="LeadDrive CRM: WhatsApp yazışması, AI agent cavabı"></div>
+  <div class="phone float" data-a="up" style="--d:650; left: 1010px; top: 400px; width: 280px; height: 590px; border-radius: 44px; animation-delay: -4s;"><img src="img/m_dash.jpg" alt="Telefonda LeadDrive CRM" style="border-radius:34px"></div>
+</section>
+
+<!-- 2 agenda -->
+<section class="scene" data-name="agenda">
+  <p class="eyebrow" data-a="up">Sizin tələbləriniz</p>
+  <h2 style="--d:80">Yazdığınız hər bəndi<br>ekranda göstəririk</h2>
+  <div class="agenda">
+    <button class="ag" data-go="clients" data-a="up" style="--d:150"><span class="n">01</span><div><b>Müştərilər və satış</b><span>Baza, tarixçə, sövdələşmələr mərhələlər üzrə</span></div></button>
+    <button class="ag" data-go="quote" data-a="up" style="--d:220"><span class="n">02</span><div><b>Təkliflər və dəyişikliklər</b><span>KT versiyaları, müştəri ilə razılaşma</span></div></button>
+    <button class="ag" data-go="statuses" data-a="up" style="--d:290"><span class="n">03</span><div><b>Sifariş statusları</b><span>Sorğu → təsdiq → istehsal → qəbul, gecikmələr</span></div></button>
+    <button class="ag" data-go="approval" data-a="up" style="--d:360"><span class="n">04</span><div><b>Təsdiq və limitlər</b><span>Kim təsdiqlədi, məbləğə görə qayda</span></div></button>
+    <button class="ag" data-go="channels" data-a="up" style="--d:430"><span class="n">05</span><div><b>E-poçt, WhatsApp</b><span>Bütün yazışmalar bir yerdə</span></div></button>
+    <button class="ag" data-go="reports" data-a="up" style="--d:500"><span class="n">06</span><div><b>Hesabatlar və Excel</b><span>Panel, konstruktor, ixrac</span></div></button>
+    <button class="ag" data-go="control" data-a="up" style="--d:570"><span class="n">07</span><div><b>Rollar və jurnal</b><span>Hər kəs öz işini görür, hər dəyişiklik qeyddə</span></div></button>
+    <button class="ag bonus" data-go="ai-intro" data-a="up" style="--d:640"><span class="n">+</span><div><b>Bonus: süni intellekt</b><span>Cavab verir, qiymətləndirir, xatırladır</span></div></button>
+  </div>
+</section>
+
+<!-- 3 clients -->
+<section class="scene" data-name="clients">
+  <p class="eyebrow" data-a="up">01 · Müştərilər</p>
+  <h2 style="--d:80">Hər müştəri — bütün tarixçəsi ilə</h2>
+  <div class="cam" data-a="up" style="--d:150; left:128px; top:270px; width:1664px; height:730px;" data-seq='[[0, "img/cam_inbox_rauf.jpg", 2880, 1800, "LeadDrive CRM: gələnlər qutusu və yazışma"], [1600, "img/cr_thread.jpg", 1082, 624, "Yazışma: müştərinin sualı və AI agentin cavabı", 1.15], [5200, "img/cr_card.jpg", 532, 264, "Müştəri kartı", 1.6]]'></div>
+  <div class="co" data-t="3000" style="left:150px; top:925px;"><i></i>Müştəri WhatsApp-dan yazdı — AI agent dərhal cavab verdi</div>
+  <div class="co" data-t="6700" style="left:150px; top:925px;"><i></i>Müştəri kartı: kanal, tarixçə, etiketlər, qeyd</div>
+</section>
+
+<!-- 4 pipeline -->
+<section class="scene" data-name="pipeline">
+  <p class="eyebrow" data-a="up">01 · Satış lövhəsi</p>
+  <h2 style="--d:80">Hər sifariş — gözünüzün qarşısında</h2>
+  <div class="board" id="board" data-a="up" style="--d:200"></div>
+  <p class="label" data-a="up" style="--d:500; left:128px; top:918px;"><span class="badge-ai" style="font-size:18px">%</span>&nbsp; AI qazanma ehtimalı · nümunə</p>
+  <div class="cursor"><svg viewBox="0 0 24 24"><path d="M4 2l16 9.5-7 1.6-3.6 6.9z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+</section>
+
+<!-- 5 quote -->
+<section class="scene" data-name="quote">
+  <div style="position:absolute; left:128px; top:104px; width:640px;">
+    <p class="eyebrow" data-a="up">02 · Kommersiya təklifi</p>
+    <h2 style="--d:80">Müştəri dəyişdi — yeni versiya hazır</h2>
+  </div>
+  <div class="reason" data-a="up" style="--d:250"><small>Müştərinin dəyişikliyi · v1 rədd edildi</small><p id="reasonText"></p></div>
+  <div style="position:absolute; left:128px; top:760px; display:flex; gap:14px;" data-a="up" data-dd="1">
+    <span class="chip ok" id="qChipV2" style="opacity:0; transition:opacity .4s">v2 · müştəri baxdı</span>
+    <span class="chip" id="pdfChip" style="opacity:0; transition: opacity .4s">⤓ PDF müştəriyə</span>
+  </div>
+  <table class="qt" id="qt" data-a="right" style="--d:200">
+    <tr><th style="width:46%">KT-2026-031</th><th style="width:27%">v1</th><th class="v2h" style="width:27%">v2</th></tr>
+    <tr><td>Stul — palıd</td><td>24 × 180</td><td class="v2">24 × 180</td></tr>
+    <tr><td>Masa, 4 nəfərlik</td><td>6 × 420</td><td class="v2 chg">8 × 420</td></tr>
+    <tr><td>Bar piştaxtası — fərdi</td><td>1 × 2 600</td><td class="v2">1 × 2 600</td></tr>
+    <tr><td>Çatdırılma, quraşdırma</td><td>350</td><td class="v2">350</td></tr>
+    <tr><td>Endirim</td><td>—</td><td class="v2 chg">5%</td></tr>
+    <tr class="tot"><td>Cəmi, AZN</td><td>9 790,00</td><td class="v2" id="qTotal">0,00</td></tr>
+    <tr class="st"><td>Status</td><td><span class="chip late" style="font-size:20px;padding:8px 14px">Rədd edildi</span></td><td class="v2"><span class="chip ok" style="font-size:20px;padding:8px 14px">Baxıldı</span></td></tr>
+  </table>
+  <div class="frame" data-a="up" style="--d:700; left: 820px; top: 840px; width: 972px; height: 150px;"><img src="img/quotes.jpg" alt="LeadDrive CRM: eyni təklifin iki versiyası siyahıda" style="object-position: 0 62%;"></div>
+</section>
+
+<!-- 6 statuses -->
+<section class="scene" data-name="statuses">
+  <p class="eyebrow" data-a="up">03 · Sifariş statusları</p>
+  <h2 style="--d:80">Sorğudan qəbula — hər addım görünür</h2>
+  <div class="steps" id="steps" data-a="up" style="--d:150; top:270px;">
+    <div class="stp"><i>1</i>Sorğu</div><div class="stp"><i>2</i>Təsdiq</div><div class="stp"><i>3</i>Sifariş</div>
+    <div class="stp"><i>4</i>İstehsal</div><div class="stp"><i>5</i>Çatdırılma</div><div class="stp"><i>6</i>Qəbul</div>
+  </div>
+  <div class="cam" id="camBoard" data-a="up" style="--d:250; left:128px; top:390px; width:1664px; height:610px;" data-seq='[[0, "img/cam_board.jpg", 2880, 1800, "LeadDrive CRM: sifarişlər lövhəsi"], [1500, "img/cr_board.jpg", 2756, 618, "Sifariş, istehsal, çatdırılma statusları; gecikən iş qırmızı"]]'></div>
+  <div class="ring" id="lateRing" style="opacity:0; transition: opacity .4s;"></div>
+  <div class="co" data-t="2800" style="left:1180px; top:925px;"><i></i>Hər sifariş sövdələşməyə bağlıdır</div>
+  <div class="co" data-t="6000" style="left:150px; top:925px;"><i style="background:#D92D20"></i>Son tarix keçdi — iş özü qırmızı olur</div>
+</section>
+
+<!-- 7 approval -->
+<section class="scene" data-name="approval">
+  <p class="eyebrow" data-a="up">04 · Təsdiq zənciri</p>
+  <h2 style="--d:80">Kim təsdiqlədi — həmişə görünür</h2>
+  <div class="ctx" data-a="up" style="--d:150; top:270px;"><span class="chip">Müqavilə MQ-2026-018</span><span class="chip">Restoran mebeli — 24 yer</span><span class="chip">11 780 AZN</span></div>
+  <div class="chain" data-a="up" style="--d:250; top:360px;">
+    <div class="node" id="n1"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#0F9D63" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div><div><h3>Satış rəhbəri</h3><p id="n1t">Nərgiz Məmmədova · gözləyir</p></div></div>
+    <div class="link"><b id="l1"></b></div>
+    <div class="node" id="n2"><div class="ic" id="n2ic"><svg viewBox="0 0 24 24" fill="none" stroke="#D98A00" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></div><div style="flex:1"><h3>Maliyyə</h3><p id="n2t">Lalə Quliyeva · SLA 48 saat</p></div><span class="chip ok" id="n2btn" style="font-size:22px; padding:12px 18px;">Təsdiqlə</span></div>
+  </div>
+  <div class="rule" data-a="up" style="--d:900; top:600px;"><span class="tag">Qayda</span>5 000 AZN-dən yuxarı müqaviləyə rəhbərlik təsdiqi özü əlavə olunur</div>
+  <div class="cam" data-a="up" style="--d:600; left:128px; top:710px; width:1664px; height:290px;" data-seq='[[0, "img/cam_contract.jpg", 2880, 1800, "LeadDrive CRM: müqavilə səhifəsi"], [1600, "img/cr_chain.jpg", 2756, 500, "Müqavilənin razılaşma zənciri"]]'></div>
+  <div class="co" id="doneCo" style="left:1180px; top:250px; background:#0F9D63; color:#fff;"><i style="background:#fff"></i>Müqavilə təsdiqləndi</div>
+  <div class="cursor"><svg viewBox="0 0 24 24"><path d="M4 2l16 9.5-7 1.6-3.6 6.9z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+</section>
+
+<!-- 8 channels -->
+<section class="scene" data-name="channels">
+  <p class="eyebrow" data-a="up">05 · E-poçt, WhatsApp və daha çox</p>
+  <h2 style="--d:80">Bütün yazışmalar —<br>bir qutuda</h2>
+  <div class="hub" id="hub" data-a="zoom" style="--d:200"><b id="hubNum">0</b><span>yeni müraciət</span></div>
+  <div id="chs"></div>
+  <div class="cam" data-a="right" style="--d:500; left: 960px; top: 170px; width: 840px; height: 830px;" data-seq='[[0, "img/cam_inbox.jpg", 2880, 1800, "LeadDrive CRM: gələnlər qutusu"], [4400, "img/cr_inbox.jpg", 1094, 1700, "Kanallar və yazışmalar bir siyahıda"]]'></div>
+  <div class="co" data-t="6000" style="left:990px; top:925px;"><i></i>WhatsApp, Instagram, TikTok, e-poçt, zəng — bir siyahı</div>
+</section>
+
+<!-- 9 reports -->
+<section class="scene" data-name="reports">
+  <p class="eyebrow" data-a="up">06 · Hesabatlar</p>
+  <h2 style="--d:80">Rəqəmlər hazırdır. Excel — bir kliklə.</h2>
+  <div class="cam" id="camRep" data-a="up" style="--d:150; left:128px; top:270px; width:1664px; height:730px;" data-seq='[[0, "img/cam_reports.jpg", 2880, 1800, "LeadDrive CRM: hesabatlar paneli"], [1300, "img/cr_pipeline.jpg", 900, 696, "Satış boru xətti hesabatı", 1.0], [5200, "img/cr_builder.jpg", 2024, 1304, "Hesabat konstruktoru və İxrac düyməsi"]]'></div>
+  <div class="co" data-t="2800" style="left:150px; top:925px;"><i></i>Satış boru xətti — mərhələlər üzrə, real vaxtda</div>
+  <div class="co" id="coBld" style="left:150px; top:925px;"><i></i>Öz hesabatınız: sütun, filtr, qruplaşdırma</div>
+  <div class="xls" id="xls" style="left:1560px; top:560px;">XLSX<small>hesabat.xlsx</small></div>
+  <div class="cursor"><svg viewBox="0 0 24 24"><path d="M4 2l16 9.5-7 1.6-3.6 6.9z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+</section>
+
+<!-- 10 control -->
+<section class="scene" data-name="control">
+  <p class="eyebrow" data-a="up">07 · Rollar və jurnal</p>
+  <h2 style="--d:80">Kim, nə, nə vaxt</h2>
+  <div id="tabs" style="position:absolute; left:128px; top:270px; display:flex; gap:16px;" data-a="up" data-dd="1">
+    <span class="chip tabc on">Rollar — hərə öz hüququ</span><span class="chip tabc">Audit jurnalı — hər dəyişiklik qeyddə</span>
+  </div>
+  <div class="cam" id="camCtl" data-a="up" style="--d:250; left:128px; top:370px; width:1664px; height:630px;" data-seq='[[0, "img/cam_users.jpg", 2880, 1800, "LeadDrive CRM: istifadəçilər"], [1300, "img/cr_users.jpg", 2756, 1097, "İstifadəçilər və rollar"], [4800, "img/cam_audit.jpg", 2880, 1800, "LeadDrive CRM: audit jurnalı"], [6100, "img/cr_audit.jpg", 2756, 1019, "Audit jurnalı: tarix, əməliyyat, obyekt, istifadəçi"]]'></div>
+</section>
+
+<!-- 11 mobile -->
+<section class="scene" data-name="mobile">
+  <div style="position:absolute; left:128px; top:300px; width:620px;">
+    <p class="eyebrow" data-a="up">Bulud və telefon</p>
+    <h2 style="--d:80">Ofisdə, məkanda, yolda</h2>
+    <p class="lead" data-a="up" style="--d:200">Tədbir yerində də hər sifariş əlinizdədir. Proqram yükləmək lazım deyil.</p>
+  </div>
+  <div class="phone float" data-a="up" style="--d:200; left: 780px; top: 170px;"><img src="img/m_inbox.jpg" alt="Telefonda gələnlər qutusu"></div>
+  <div class="phone float" data-a="up" style="--d:380; left: 1110px; top: 110px; animation-delay:-2.3s;"><img src="img/m_dash.jpg" alt="Telefonda idarə paneli"></div>
+  <div class="phone float" data-a="up" style="--d:560; left: 1440px; top: 190px; animation-delay:-4.6s;"><img src="img/m_quote.jpg" alt="Telefonda kommersiya təklifi"></div>
+</section>
+
+<!-- 12 languages -->
+<section class="scene" data-name="languages">
+  <p class="eyebrow" data-a="up">Dil</p>
+  <div class="langbig" id="langbig"><span class="on">Azərbaycanca</span><span>Русский</span><span>English</span></div>
+  <p class="lead" data-a="up" style="--d:150; position:absolute; left:128px; top:340px; width:1400px; margin:0;">Hər işçi öz dilində işləyir. Məlumat eyni qalır.</p>
+  <div class="slides" id="langSlides" style="left: 128px; top: 470px; width: 1664px; height: 416px;" data-a="up">
+    <div class="frame on"><img src="img/deals_az.jpg" alt="CRM azərbaycan dilində"></div>
+    <div class="frame"><img src="img/deals_ru.jpg" alt="CRM rus dilində"></div>
+    <div class="frame"><img src="img/deals_en.jpg" alt="CRM ingilis dilində"></div>
+  </div>
+</section>
+
+<!-- 13 tech -->
+<section class="scene" data-name="tech">
+  <p class="eyebrow" data-a="up">Texniki tərəf</p>
+  <h2 style="--d:80">Təhlükəsiz və inteqrasiyaya hazır</h2>
+  <div class="tiles">
+    <div class="tile" data-a="up" style="--d:150"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 1 1 .9-8.9A6 6 0 0 1 19 11a3.5 3.5 0 0 1-.5 7z"/></svg></div><h3>Bulud</h3><p>Server qurmaq lazım deyil — brauzer və telefon kifayətdir</p></div>
+    <div class="tile" data-a="up" style="--d:250"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div><h3>İki addımlı giriş</h3><p>Parol + telefon kodu (2FA)</p></div>
+    <div class="tile" data-a="up" style="--d:350"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg></div><h3>Şifrələmə</h3><p>Müştəri məlumatı və fayllar şifrəli saxlanılır</p></div>
+    <div class="tile" data-a="up" style="--d:450"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg></div><h3>Hər gün ehtiyat nüsxə</h3><p>Baza gündəlik, ayrıca yerdə</p></div>
+    <div class="tile" data-a="up" style="--d:550"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg></div><h3>API</h3><p>Mühasibat və digər sistemlərlə əlaqə üçün</p></div>
+    <div class="tile" data-a="up" style="--d:650"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></div><h3>Mövcud bazanı köçürmək</h3><p>Kontaktları fayldan (CSV) idxal</p></div>
+  </div>
+</section>
+
+<!-- 14 ai intro -->
+<section class="scene dark" data-name="ai-intro">
+  <div style="position:absolute; left:128px; top:330px; width:1600px;">
+    <p class="eyebrow" data-a="up">Bonus</p>
+    <h1 style="--d:100">İndi isə —<br><span class="ai-text">süni intellekt</span></h1>
+    <p class="lead" data-a="up" style="--d:300; max-width:1000px;">Gecə cavab verir, kimə zəng edəcəyinizi deyir, səhər işi özü yığır.</p>
+  </div>
+</section>
+
+<!-- 15 ai night -->
+<section class="scene" data-name="ai-night">
+  <div style="position:absolute; left:128px; top:250px; width:820px;">
+    <p class="eyebrow" data-a="up">AI agent · 24/7</p>
+    <h2 style="--d:80">Gecə 00:39.<br><span class="ai-text">Cavab — dərhal.</span></h2>
+    <p class="lead" data-a="up" style="--d:200">WhatsApp, Instagram, TikTok, sayt çatı — AI sizin məlumatlarınızla cavab verir.</p>
+  </div>
+  <div class="phone" data-a="up" style="--d:150; left: 1010px; top: 150px;">
+    <div class="chat"><div class="top"><div class="ava" style="background:#4A5A54">RM</div><div class="who"><b>Rauf Məmmədli</b><span>WhatsApp</span></div></div><div class="msgs" id="chatA"></div></div>
+  </div>
+  <div class="frame" data-a="right" style="--d:900; left: 1440px; top: 560px; width: 400px; height: 274px;"><img src="img/wa_thread.jpg" alt="Həmin yazışma LeadDrive CRM-də"></div>
+  <p class="label" data-a="right" style="--d:1000; left: 1440px; top: 856px;">Həmin yazışma CRM-də</p>
+</section>
+
+<!-- 16 ai price -->
+<section class="scene" data-name="ai-price">
+  <div class="phone" data-a="up" style="--d:100; left: 128px; top: 150px;">
+    <div class="chat"><div class="top"><div class="ava" style="background:#111">E</div><div class="who"><b>elcin.baku</b><span>TikTok</span></div></div><div class="msgs" id="chatB"></div></div>
+  </div>
+  <div style="position:absolute; left:640px; top:300px; width:1150px;">
+    <p class="eyebrow" data-a="up">Nəzarət sizdədir</p>
+    <h2 style="--d:80">AI qiymət<br><span class="ai-text">uydurmur.</span></h2>
+    <p class="lead" data-a="up" style="--d:200">Qiyməti və endirimi yalnız menecer təsdiqləyir. AI müştərini saxlayır, sözü sizə verir.</p>
+    <div data-a="up" style="--d:350; margin-top: 44px; display:flex; gap:16px; flex-wrap:wrap;"><span class="chip ok">Qiymət — menecer</span><span class="chip ok">Endirim — menecer</span><span class="chip ai">Salam, sual — AI</span></div>
+  </div>
+</section>
+
+<!-- 17 ai levels -->
+<section class="scene" data-name="ai-levels">
+  <p class="eyebrow" data-a="up">AI avtomatlaşdırma</p>
+  <h2 style="--d:80">Nə qədər etibar edirsiniz —<br>o qədər <span class="ai-text">özü edir</span></h2>
+  <div class="track" data-a="up" style="--d:200"><b id="trackFill"></b></div>
+  <div class="levels">
+    <div class="lvl" data-a="up" style="--d:250"><div class="n">01</div><h3>AI analiz edir</h3><p>Səhər icmalı, risklər, lidlərin qiyməti. Heç nəyi dəyişmir.</p><span class="chip">Yalnız oxu</span></div>
+    <div class="lvl" data-a="up" style="--d:380"><div class="n">02</div><h3>AI təklif edir</h3><p>Cavab, tapşırıq, xatırlatma hazırlayır. Siz bir kliklə təsdiqləyirsiniz.</p><span class="chip wait">Yoxla</span></div>
+    <div class="lvl" data-a="up" style="--d:510"><div class="n">03</div><h3>AI özü edir</h3><p>Mesaj göndərir, tapşırıq yaradır — sizin qaydalarınızla.</p><span class="chip ai">Avtopilot</span></div>
+  </div>
+</section>
+
+<!-- 18 scoring -->
+<section class="scene" data-name="scoring">
+  <div style="position:absolute; left:128px; top:104px; width:820px;">
+    <p class="eyebrow" data-a="up">Da Vinci · lid reytinqi</p>
+    <h2 style="--d:80">Kimə ilk zəng edək? <span class="ai-text">AI deyir.</span></h2>
+    <p class="lead" data-a="up" style="--d:250; font-size:28px;">Hər müraciət A-dan F-ə: isti — əvvəl.</p>
+  </div>
+  <div class="grades small" id="grades" style="left:1150px; top:110px;">
+    <div class="g"><div class="bar" style="background:#12A06A"></div><b style="color:#0F9D63">A</b><span data-n="4">0</span></div>
+    <div class="g"><div class="bar" style="background:#3B82C4"></div><b style="color:#5B9BD8">B</b><span data-n="5">0</span></div>
+    <div class="g"><div class="bar" style="background:#E6B000"></div><b style="color:#E6B000">C</b><span data-n="2">0</span></div>
+    <div class="g"><div class="bar" style="background:#E5603A"></div><b style="color:#E5603A">D</b><span data-n="2">0</span></div>
+  </div>
+  <div class="cam" data-a="up" style="--d:300; left:128px; top:470px; width:1664px; height:530px;" data-seq='[[0, "img/cam_aiscoring.jpg", 2880, 1800, "LeadDrive CRM: Da Vinci lid reytinqi"], [1700, "img/cr_scoring.jpg", 2756, 891, "Lidlər balına görə: 100, 98, 81"]]'></div>
+</section>
+
+<!-- 19 davinci -->
+<section class="scene dark" data-name="davinci">
+  <p class="eyebrow" data-a="up">Da Vinci · səhər icmalı</p>
+  <h2 style="--d:80">Səhər açırsınız —<br><span class="ai-text">AI artıq yığıb</span></h2>
+  <div class="brief" id="brief"><div class="row"><i>01</i><span></span></div><div class="row"><i>02</i><span></span></div><div class="row"><i>03</i><span></span></div></div>
+  <div class="ask" data-a="up" style="--d:400"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--night-hot)"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg><span id="askText"></span><span class="caret"></span></div>
+  <div class="cam" data-a="right" style="--d:250; left: 860px; top: 200px; width: 940px; height: 700px;" data-seq='[[0, "img/cam_dash.jpg", 2880, 1800, "LeadDrive CRM: idarə paneli"], [1500, "img/cr_brief.jpg", 724, 689, "Da Vinci: bu günün fokusu", 1.0]]'></div>
+</section>
+
+<!-- 20 demo -->
+<section class="scene" data-name="demo">
+  <canvas id="confetti" width="1920" height="1080"></canvas>
+  <div style="position:absolute; left:128px; top:300px; width:1500px;">
+    <p class="eyebrow" data-a="up">Növbəti addım</p>
+    <h1 style="--d:100">Canlı demo —<br><span class="ai-text">sizin sifarişinizlə</span></h1>
+    <p class="lead" data-a="up" style="--d:250; max-width: 1100px;">Bir real sifarişi götürürük: müraciət, təklif, təsdiq, status — ekranda, birlikdə.</p>
+  </div>
+  <p class="label" data-a="up" style="--d:400; left:128px; top:900px; font-size:24px;">FanumSec × LeadDrive CRM</p>
+</section>
+
+</div>
+</div>
+
+<div id="ui">
+  <button class="ctl" id="prev" aria-label="Əvvəlki">‹</button>
+  <div id="dots" role="tablist" aria-label="Səhnələr"></div>
+  <span id="count">1 / 20</span>
+  <button class="ctl" id="next" aria-label="Növbəti">›</button>
+  <button class="ctl" id="pal" aria-label="Rəngi dəyiş"><span class="sw"></span><span id="palName">Yaşıl</span></button>
+  <button class="ctl" id="bgBtn" aria-label="Fonu dəyiş">◐ <span id="bgName">Açıq</span></button>
+  <button class="ctl" id="auto" aria-pressed="false">▶ Avto</button>
+  <button class="ctl" id="fs" aria-label="Tam ekran">⛶</button>
+</div>
+
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  var scenes = Array.prototype.slice.call(document.querySelectorAll('.scene'));
+  var reduced = false;
+  try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  var cur = 0, timers = [], autoTimer = null, auto = false;
+
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  /* palette */
+  var PALS = [['green', 'Yaşıl'], ['red', 'Qırmızı'], ['graphite', 'Qrafit']], pi = 0;
+  try { var sv = localStorage.getItem('booo-pal'); PALS.forEach(function (p, i) { if (p[0] === sv) pi = i; }); } catch (e) {}
+  function applyPal() {
+    if (PALS[pi][0] === 'green') document.documentElement.removeAttribute('data-pal'); else document.documentElement.setAttribute('data-pal', PALS[pi][0]);
+    document.getElementById('palName').textContent = PALS[pi][1];
+    try { localStorage.setItem('booo-pal', PALS[pi][0]); } catch (e) {}
+  }
+  applyPal();
+  document.getElementById('pal').addEventListener('click', function (e) { e.stopPropagation(); pi = (pi + 1) % PALS.length; applyPal(); });
+
+  function at(ms, fn) { if (reduced) { fn(); return; } timers.push(setTimeout(fn, ms)); }
+  function clearAll() { timers.forEach(clearTimeout); timers = []; }
+  function typeInto(el, text, start, speed) {
+    if (reduced) { el.textContent = text; return start; }
+    for (var i = 0; i <= text.length; i++) { (function (k) { at(start + k * speed, function () { el.textContent = text.slice(0, k); }); })(i); }
+    return start + text.length * speed;
+  }
+  function fmt(v, dec) {
+    var s = v.toFixed(dec || 0).split('.');
+    s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return dec ? s[0] + ',' + s[1] : s[0];
+  }
+  function countTo(el, to, dur, start, dec) {
+    var steps = 40;
+    for (var i = 0; i <= steps; i++) { (function (k) { at(start + dur * k / steps, function () { el.textContent = fmt(to * (1 - Math.pow(1 - k / steps, 3)), dec); }); })(i); }
+  }
+
+
+  /* background */
+  var BGS = [['light', 'Açıq'], ['dark', 'Tünd']], bi = 1;
+  try { if (localStorage.getItem('booo-bg') === 'light') bi = 0; } catch (e) {}
+  function applyBg() {
+    if (BGS[bi][0] === 'dark') document.documentElement.setAttribute('data-bg', 'dark'); else document.documentElement.removeAttribute('data-bg');
+    document.getElementById('bgName').textContent = BGS[bi][1];
+    try { localStorage.setItem('booo-bg', BGS[bi][0]); } catch (e) {}
+  }
+  applyBg();
+  document.getElementById('bgBtn').addEventListener('click', function (e) { e.stopPropagation(); bi = (bi + 1) % 2; applyBg(); });
+
+  /* words */
+  Array.prototype.forEach.call(document.querySelectorAll('.scene h1, .scene h2'), function (h) {
+    var i = 0, nodes = Array.prototype.slice.call(h.childNodes);
+    h.innerHTML = '';
+    nodes.forEach(function (n) {
+      if (n.nodeType === 3) {
+        n.textContent.split(/(\s+)/).forEach(function (part) {
+          if (!part) return;
+          if (/^\s+$/.test(part)) { h.appendChild(document.createTextNode(' ')); return; }
+          var sp = document.createElement('span'); sp.className = 'w'; sp.style.setProperty('--wi', i++); sp.textContent = part; h.appendChild(sp);
+        });
+      } else if (n.nodeName === 'BR') { h.appendChild(n); }
+      else { n.classList.add('w'); n.style.setProperty('--wi', i++); h.appendChild(n); }
+    });
+  });
+
+  /* camera */
+  function camSet(el, r, instant) {
+    var W = el.clientWidth, H = el.clientHeight, img = el.querySelector('img');
+    var sc = Math.min(W / r[2], H / r[3]);
+    var tx = (W - r[2] * sc) / 2 - r[0] * sc, ty = (H - r[3] * sc) / 2 - r[1] * sc;
+    var iw = 2880 * sc, ih = 1800 * sc;
+    if (iw >= W) tx = Math.min(0, Math.max(W - iw, tx));
+    if (ih >= H) ty = Math.min(0, Math.max(H - ih, ty));
+    if (instant) el.classList.add('swap');
+    img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')';
+    if (instant) { void img.offsetWidth; el.classList.remove('swap'); }
+    el._t = { s: sc, tx: tx, ty: ty };
+  }
+  function camPt(el, x, y) { var t = el._t; return [el.offsetLeft + t.tx + x * t.s, el.offsetTop + t.ty + y * t.s]; }
+  function camRun(el, steps) {
+    steps.forEach(function (st, k) {
+      var r = st.slice(1);
+      if (k === 0) camSet(el, r, true); else at(st[0], function () { camSet(el, r); });
+    });
+  }
+  function cursorTo(sc, x, y, fast) {
+    var c = sc.querySelector('.cursor'); if (!c) return;
+    c.classList.add('show'); c.classList.toggle('fast', !!fast);
+    c.style.left = (x - 8) + 'px'; c.style.top = (y - 6) + 'px';
+  }
+  function clickAt(sc, x, y) {
+    var r = document.createElement('div'); r.className = 'ripple'; r.style.left = x + 'px'; r.style.top = y + 'px';
+    sc.appendChild(r); setTimeout(function () { r.remove(); }, 700);
+  }
+  function showCo(sc, c) {
+    Array.prototype.forEach.call(sc.querySelectorAll('.co.show'), function (o) { if (o !== c && o.style.left === c.style.left) o.classList.remove('show'); });
+    c.classList.add('show');
+  }
+  function seqRun(el, steps) {
+    el.innerHTML = ''; el._layers = [];
+    var W = el.clientWidth, H = el.clientHeight;
+    steps.forEach(function (st, k) {
+      var mx = st[5] || 0.75, sc = Math.min(W / st[2], H / st[3], mx);
+      var f = { s: sc, x: (W - st[2] * sc) / 2, y: (H - st[3] * sc) / 2, w: st[2] * sc, h: st[3] * sc };
+      var img = document.createElement('img'); img.className = 'lay'; img.src = st[1]; img.alt = st[4] || '';
+      img.style.left = f.x + 'px'; img.style.top = f.y + 'px'; img.style.width = f.w + 'px'; img.style.height = f.h + 'px';
+      el.appendChild(img); el._layers.push(f);
+      if (k === 0) img.classList.add('on');
+      else at(st[0], function () { Array.prototype.forEach.call(el.children, function (c) { c.classList.remove('on'); }); img.classList.add('on'); });
+    });
+  }
+  function layPt(el, k, x, y) { var f = el._layers[k]; return [el.offsetLeft + f.x + x * f.s, el.offsetTop + f.y + y * f.s]; }
+  function sceneReset(sc) {
+    Array.prototype.forEach.call(sc.querySelectorAll('.co'), function (c) { c.classList.remove('show'); if (c.dataset.t) at(+c.dataset.t, function () { showCo(sc, c); }); });
+    var cur = sc.querySelector('.cursor'); if (cur) { cur.classList.remove('show'); cur.classList.add('fast'); cur.style.left = '1000px'; cur.style.top = '1120px'; }
+    Array.prototype.forEach.call(sc.querySelectorAll('.cam[data-seq]'), function (c) { seqRun(c, JSON.parse(c.dataset.seq)); });
+  }
+
+  var plays = {};
+
+  /* channels */
+  var CH = [['WhatsApp', '#25D366', 'W'], ['Instagram', '#E1306C', 'IG'], ['TikTok', '#111111', 'T'], ['Messenger', '#0084FF', 'M'],
+            ['Telegram', '#26A5E4', 'TG'], ['Sayt çatı', '#4A5A54', 'S'], ['E-poçt', '#C28A00', '@'], ['Zəng', '#0F9D63', '☎']];
+  var chsBox = document.getElementById('chs');
+  CH.forEach(function (c, i) {
+    var a = (i / CH.length) * Math.PI * 2 - Math.PI / 2;
+    var el = document.createElement('div');
+    el.className = 'ch';
+    el.innerHTML = '<i style="background:' + c[1] + '">' + c[2] + '</i>' + c[0];
+    var x = 540 + Math.cos(a) * 400 - 100, y = 570 + Math.sin(a) * 300 - 36;
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.dataset.dx = (440 - x); el.dataset.dy = (534 - y);
+    chsBox.appendChild(el);
+  });
+  plays.channels = function () {
+    var chs = chsBox.children, num = document.getElementById('hubNum');
+    for (var i = 0; i < chs.length; i++) { chs[i].classList.remove('go'); chs[i].style.transform = ''; }
+    num.textContent = '0';
+    for (var j = 0; j < chs.length; j++) { (function (k) {
+      at(900 + k * 380, function () { var c = chs[k]; c.style.transform = 'translate(' + c.dataset.dx + 'px,' + c.dataset.dy + 'px) scale(.5)'; c.classList.add('go'); });
+      at(900 + k * 380 + 850, function () { num.textContent = String(k + 1); });
+    })(j); }
+  };
+
+  /* chats */
+  function chatPlay(boxId, items) {
+    var box = document.getElementById(boxId); box.innerHTML = '';
+    var t = 500;
+    items.forEach(function (m) {
+      if (m.ai) {
+        var ty = document.createElement('div'); ty.className = 'typing'; ty.innerHTML = '<i></i><i></i><i></i>';
+        box.appendChild(ty);
+        at(t, function () { ty.classList.add('show'); }); t += 1500; at(t, function () { ty.remove(); });
+      }
+      var el = document.createElement('div');
+      el.className = 'msg ' + (m.ai ? 'out' : 'in');
+      el.innerHTML = m.text + '<small>' + (m.ai ? '<span class="badge-ai">AI agent</span>' : '') + m.time + '</small>';
+      box.appendChild(el);
+      at(t, function () { el.classList.add('show'); });
+      t += m.ai ? 1600 : 1300;
+    });
+  }
+  plays['ai-night'] = function () {
+    chatPlay('chatA', [
+      { text: 'Axşamınız xeyir. Sabah neçədə açılırsınız?', time: '00:39' },
+      { ai: 1, text: 'Axşamınız xeyir! Mağazamız hər gün 10:00–20:00 işləyir, sifarişi indi də saytda və ya burada qeyd edə bilərsiniz.', time: '00:40' },
+      { text: 'Təşəkkürlər!', time: '00:44' }
+    ]);
+  };
+  plays['ai-price'] = function () {
+    chatPlay('chatB', [
+      { text: 'Videodakı yataq dəsti neçəyədir? Rəngi boz olsun.', time: '21:54' },
+      { ai: 1, text: 'Salam! Boz rəngdə var. Dəqiq qiyməti və endirimi menecerimiz Aynur xanım səhər yazacaq.', time: '21:56' },
+      { text: 'Oldu, gözləyirəm', time: '22:00' }
+    ]);
+  };
+
+  plays['ai-levels'] = function () {
+    var lv = document.querySelectorAll('.lvl'), fill = document.getElementById('trackFill');
+    lv.forEach(function (l) { l.classList.remove('on'); }); fill.style.width = '0';
+    [0, 1, 2].forEach(function (k) {
+      at(1000 + k * 1400, function () { lv.forEach(function (l) { l.classList.remove('on'); }); lv[k].classList.add('on'); fill.style.width = (k === 0 ? 17 : k === 1 ? 50 : 100) + '%'; });
+    });
+  };
+
+  plays.scoring = function () {
+    var gs = document.querySelectorAll('#grades .g');
+    gs.forEach(function (g) { g.querySelector('.bar').style.height = '0'; g.querySelector('span').textContent = '0'; });
+    gs.forEach(function (g, k) {
+      var n = +g.querySelector('span').dataset.n;
+      at(700 + k * 220, function () { g.querySelector('.bar').style.height = (g.parentNode.classList.contains('small') ? 24 + n * 26 : 40 + n * 52) + 'px'; });
+      countTo(g.querySelector('span'), n, 900, 700 + k * 220, 0);
+      at(1700 + k * 220, function () { g.querySelector('span').textContent = n + ' lid'; });
+    });
+  };
+
+  /* sales kanban */
+  var STAGES = [['Lid', '#8A94A6'], ['Kvalifikasiya', '#3B82C4'], ['Təklif', '#E6B000'], ['Danışıqlar', '#E5603A'], ['Qazanıldı', '#0F9D63']];
+  var PROB = [10, 25, 50, 75, 100];
+  var board = document.getElementById('board');
+  STAGES.forEach(function (s, i) {
+    var c = document.createElement('div'); c.className = 'col'; c.style.left = (i * 337.75) + 'px';
+    c.innerHTML = '<h4><span><span class="dot" style="background:' + s[1] + '"></span>' + s[0] + '</span><em>0</em></h4>';
+    board.appendChild(c);
+  });
+  var CARDS = [
+    { t: 'Korporativ Yeni il — 120 nəfər', s: 0, plan: [1, 2, 3, 4] },
+    { t: 'Teambuilding — Qəbələ', s: 0, plan: [1, 2] },
+    { t: 'Brend lansmanı — fotozona', s: 1, plan: [2, 3] },
+    { t: 'Toy dekoru — iki zal', s: 2, plan: [3] },
+    { t: 'Ofis açılışı — şar dekoru', s: 0, plan: [1] }
+  ];
+  var cardEls = CARDS.map(function (c) {
+    var el = document.createElement('div'); el.className = 'card';
+    el.innerHTML = '<b>' + c.t + '</b><div class="meta"><span>Tədbir</span><span class="p"></span></div>';
+    board.appendChild(el); return el;
+  });
+  function layout() {
+    var slots = [0, 0, 0, 0, 0];
+    CARDS.forEach(function (c, i) {
+      var el = cardEls[i];
+      el.style.left = (c.cur * 337.75 + 16) + 'px';
+      el.style.top = (72 + slots[c.cur] * 150) + 'px';
+      slots[c.cur]++;
+      el.querySelector('.p').textContent = PROB[c.cur] + '%';
+      el.classList.toggle('won', c.cur === 4);
+    });
+    var ems = board.querySelectorAll('.col em');
+    for (var k = 0; k < 5; k++) ems[k].textContent = slots[k];
+  }
+  plays.pipeline = function (sc) {
+    CARDS.forEach(function (c) { c.cur = c.s; }); layout();
+    var others = [[1, 1], [4, 1], [2, 2], [1, 2], [2, 3], [3, 3]];
+    var bx = board.offsetLeft, by = board.offsetTop;
+    function cardPt(i) { var e = cardEls[i]; return [bx + parseFloat(e.style.left) + 150, by + parseFloat(e.style.top) + 40]; }
+    for (var r = 0; r < 4; r++) { (function (k) {
+      var t0 = 1000 + k * 1500;
+      at(t0, function () { var p = cardPt(0); cursorTo(sc, p[0], p[1], true); });
+      at(t0 + 450, function () { var p = cardPt(0); clickAt(sc, p[0], p[1]); cardEls[0].classList.add('moving'); });
+      at(t0 + 650, function () {
+        CARDS[0].cur = k + 1;
+        others.forEach(function (o, j) { if (Math.floor(j / 2) === k - 0 && k < 3) CARDS[o[0]].cur = Math.max(CARDS[o[0]].cur, o[1]); });
+        layout(); var p = cardPt(0); cursorTo(sc, p[0], p[1]);
+      });
+      at(t0 + 1500, function () { cardEls[0].classList.remove('moving'); });
+    })(r); }
+    at(1000 + 4 * 1500 + 300, function () { var c = sc.querySelector('.cursor'); if (c) c.classList.remove('show'); });
+  };
+
+  /* quote */
+  plays.quote = function () {
+    var qt = document.getElementById('qt'), tot = document.getElementById('qTotal');
+    var chg = qt.querySelectorAll('td.chg'), r = document.getElementById('reasonText');
+    var c2 = document.getElementById('qChipV2'), pdf = document.getElementById('pdfChip');
+    qt.classList.remove('showv2'); chg.forEach(function (c) { c.classList.remove('flash'); });
+    r.textContent = ''; tot.textContent = '0,00'; c2.style.opacity = '0'; pdf.style.opacity = '0';
+    var t = typeInto(r, 'Rəng: qoz → açıq palıd. Masa: 6 → 8.', 900, 40);
+    at(t + 500, function () { qt.classList.add('showv2'); });
+    at(t + 1000, function () { chg.forEach(function (c) { c.classList.add('flash'); }); });
+    countTo(tot, 10098.5, 1200, t + 900, 2);
+    at(t + 2300, function () { c2.style.opacity = '1'; });
+    at(t + 2800, function () { pdf.style.opacity = '1'; });
+  };
+
+  /* statuses */
+  plays.statuses = function (sc) {
+    var st = document.querySelectorAll('#steps .stp'), ring = document.getElementById('lateRing'), cam = document.getElementById('camBoard');
+    ring.style.opacity = '0';
+    st.forEach(function (x) { x.classList.remove('on', 'past'); });
+    for (var k = 0; k < st.length; k++) { (function (i) {
+      at(500 + i * 420, function () { st.forEach(function (x, j) { x.classList.toggle('on', j === i); x.classList.toggle('past', j < i); }); });
+    })(k); }
+    at(4700, function () { st.forEach(function (x, j) { x.classList.toggle('on', j === 3); x.classList.toggle('past', j !== 3); }); });
+    at(5600, function () {
+      var a = layPt(cam, 1, 12, 312), b = layPt(cam, 1, 2744, 409);
+      ring.style.left = a[0] + 'px'; ring.style.top = a[1] + 'px'; ring.style.width = (b[0] - a[0]) + 'px'; ring.style.height = (b[1] - a[1]) + 'px';
+      ring.style.opacity = '1';
+    });
+  };
+
+  /* approval */
+  plays.approval = function (sc) {
+    var n1 = document.getElementById('n1'), n2 = document.getElementById('n2'), l1 = document.getElementById('l1'), t = document.getElementById('n1t');
+    var t2 = document.getElementById('n2t'), btn = document.getElementById('n2btn'), co = document.getElementById('doneCo');
+    n1.className = 'node'; n2.className = 'node'; l1.style.width = '0'; t.textContent = 'Nərgiz Məmmədova · gözləyir';
+    t2.textContent = 'Lalə Quliyeva · SLA 48 saat'; btn.style.visibility = 'visible'; co.classList.remove('show');
+    at(900, function () { n1.classList.add('done'); t.textContent = 'Nərgiz Məmmədova · təsdiqlədi'; });
+    at(1300, function () { l1.style.width = '100%'; });
+    at(2200, function () { n2.classList.add('pending'); });
+    at(3200, function () { var r = btn.getBoundingClientRect(), sr = sc.getBoundingClientRect(), k = sr.width / 1920; cursorTo(sc, (r.left - sr.left + r.width / 2) / k, (r.top - sr.top + r.height / 2) / k); });
+    at(4300, function () { var r = btn.getBoundingClientRect(), sr = sc.getBoundingClientRect(), k = sr.width / 1920; clickAt(sc, (r.left - sr.left + r.width / 2) / k, (r.top - sr.top + r.height / 2) / k); });
+    at(4500, function () { n2.className = 'node done'; t2.textContent = 'Lalə Quliyeva · təsdiqlədi'; btn.style.visibility = 'hidden';
+      document.getElementById('n2ic').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#0F9D63" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'; co.classList.add('show'); });
+    at(5600, function () { var c = sc.querySelector('.cursor'); if (c) c.classList.remove('show'); });
+  };
+  plays.reports = function (sc) {
+    var rep = document.getElementById('camRep'), xls = document.getElementById('xls'), co = document.getElementById('coBld');
+    xls.classList.remove('show'); co.classList.remove('show');
+    at(6000, function () { showCo(sc, co); });
+    at(7200, function () { var p = layPt(rep, 2, 1625, 34); cursorTo(sc, p[0], p[1]); });
+    at(8300, function () { var p = layPt(rep, 2, 1625, 34); clickAt(sc, p[0], p[1]); xls.classList.add('show'); });
+    at(9400, function () { var c = sc.querySelector('.cursor'); if (c) c.classList.remove('show'); });
+  };
+  plays.control = function () {
+    var t = document.querySelectorAll('#tabs .tabc');
+    t[0].classList.add('on'); t[1].classList.remove('on');
+    at(4800, function () { t[0].classList.remove('on'); t[1].classList.add('on'); });
+  };
+  plays.davinci = function () {
+    var rows = document.querySelectorAll('#brief .row'), ask = document.getElementById('askText');
+    var lines = ['Hazırda SLA pozuntusu yoxdur.', 'Hazırda 25 aktiv lid üzərində iş gedir.', 'Satış xəttində 7 sövdə var, cari konversiya 20%-dir.'];
+    rows.forEach(function (r) { r.classList.remove('show'); r.querySelector('span').textContent = ''; });
+    ask.textContent = '';
+    var t = 900;
+    rows.forEach(function (r, k) { at(t, function () { r.classList.add('show'); }); t = typeInto(r.querySelector('span'), lines[k], t + 150, 24) + 350; });
+    typeInto(ask, 'Hansı sövdələr diqqət tələb edir?', t + 300, 45);
+  };
+
+  function rotator(listSel, slideSel, every) {
+    return function () {
+      var tabs = listSel ? document.querySelectorAll(listSel) : [];
+      var sl = document.querySelectorAll(slideSel);
+      function show(k) { sl.forEach(function (s, i) { s.classList.toggle('on', i === k); }); tabs.forEach(function (s, i) { s.classList.toggle('on', i === k); }); }
+      show(0);
+      for (var r = 1; r < 9; r++) { (function (k) { at(every * k, function () { show(k % sl.length); }); })(r); }
+    };
+  }
+  plays.languages = rotator('#langbig span', '#langSlides .frame', 1900);
+
+  var cv = document.getElementById('confetti'), cx = cv.getContext('2d'), raf = null;
+  plays.demo = function () {
+    if (reduced) return;
+    var st = getComputedStyle(document.documentElement);
+    var cols = [st.getPropertyValue('--hot').trim(), st.getPropertyValue('--blob1').trim(), st.getPropertyValue('--blob2').trim(), '#E6B000', '#3B82C4', '#FFFFFF'];
+    var parts = [];
+    for (var i = 0; i < 170; i++) parts.push({ x: 1450 + (Math.random() - .5) * 300, y: 640, vx: (Math.random() - .5) * 26, vy: -Math.random() * 30 - 8, r: Math.random() * 6.28, vr: (Math.random() - .5) * .3, w: 10 + Math.random() * 12, h: 6 + Math.random() * 8, c: cols[i % cols.length] });
+    var start = performance.now();
+    cancelAnimationFrame(raf);
+    (function frame(now) {
+      cx.clearRect(0, 0, 1920, 1080);
+      parts.forEach(function (p) { p.vy += .7; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); cx.restore(); });
+      if (now - start < 4200) raf = requestAnimationFrame(frame); else cx.clearRect(0, 0, 1920, 1080);
+    })(start);
+  };
+
+  /* navigation */
+  var dots = document.getElementById('dots'), count = document.getElementById('count');
+  scenes.forEach(function (s, i) {
+    var b = document.createElement('button'); b.setAttribute('aria-label', 'Səhnə ' + (i + 1));
+    b.addEventListener('click', function (e) { e.stopPropagation(); go(i); });
+    dots.appendChild(b);
+  });
+  function indexOf(name) { for (var i = 0; i < scenes.length; i++) if (scenes[i].dataset.name === name) return i; return -1; }
+  function go(i) {
+    if (i < 0 || i >= scenes.length) return;
+    clearAll();
+    scenes[cur].classList.remove('active', 'in');
+    cur = i;
+    var s = scenes[cur];
+    s.classList.remove('in'); void s.offsetWidth;
+    s.classList.add('active');
+    requestAnimationFrame(function () { requestAnimationFrame(function () { s.classList.add('in'); }); });
+    sceneReset(s);
+    var p = plays[s.dataset.name]; if (p) p(s);
+    Array.prototype.forEach.call(dots.children, function (d, k) { d.className = k === cur ? 'on' : (k < cur ? 'past' : ''); });
+    count.textContent = (cur + 1) + ' / ' + scenes.length;
+    try { history.replaceState(null, '', '#' + s.dataset.name); } catch (e) {}
+    if (auto) { clearTimeout(autoTimer); autoTimer = setTimeout(function () { go(cur + 1 < scenes.length ? cur + 1 : 0); }, 9000); }
+  }
+  function next() { go(Math.min(cur + 1, scenes.length - 1)); }
+  function prev() { go(Math.max(cur - 1, 0)); }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) {
+    b.addEventListener('click', function (e) { e.stopPropagation(); var k = indexOf(b.dataset.go); if (k > -1) go(k); });
+  });
+  document.getElementById('next').addEventListener('click', function (e) { e.stopPropagation(); next(); });
+  document.getElementById('prev').addEventListener('click', function (e) { e.stopPropagation(); prev(); });
+  document.getElementById('auto').addEventListener('click', function (e) {
+    e.stopPropagation(); auto = !auto; this.setAttribute('aria-pressed', String(auto)); this.textContent = auto ? '❚❚ Avto' : '▶ Avto';
+    clearTimeout(autoTimer); if (auto) autoTimer = setTimeout(next, 9000);
+  });
+  document.getElementById('fs').addEventListener('click', function (e) {
+    e.stopPropagation();
+    try { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {}); else document.exitFullscreen(); } catch (err) {}
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && e.target.closest && e.target.closest('.ag') && e.key === 'Enter') return;
+    if (['ArrowRight', 'PageDown', ' '].indexOf(e.key) > -1) { e.preventDefault(); next(); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].indexOf(e.key) > -1) { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') go(0); else if (e.key === 'End') go(scenes.length - 1);
+    else if (e.key === 'f' || e.key === 'F') document.getElementById('fs').click();
+  });
+  document.getElementById('viewport').addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('.ag')) return;
+    if (e.clientX < window.innerWidth * 0.25) prev(); else next();
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx === null) return; var dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) { dx < 0 ? next() : prev(); } tx = null; });
+
+  var ui = document.getElementById('ui'), idleT;
+  function wake() { ui.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(function () { ui.classList.add('idle'); }, 2600); }
+  document.addEventListener('mousemove', wake); wake();
+
+  var start = indexOf((location.hash || '').slice(1)); if (start < 0) start = 0;
+  go(start);
+})();
+</script>
+
+</body>
+</html>
